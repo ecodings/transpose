@@ -236,6 +236,20 @@
             font-weight: bold;
             border: 2px solid #fbc02d;
         }
+
+        .matrix-table td.diagonal-cell {
+            background: #fff9c4;
+            font-weight: bold;
+            border: 2px solid #fbc02d;
+        }
+        
+        .matrix-table td.upper-triangle {
+            background: #ffebee;
+        }
+        
+        .matrix-table td.lower-triangle {
+            background: #e3f2fd;
+        }
         
         .info-box {
             background: #fff3cd;
@@ -516,9 +530,6 @@
             const startX = Math.max(0, Math.min(width - boxSize, selectedX - Math.floor(boxSize / 2)));
             const startY = Math.max(0, Math.min(height - boxSize, selectedY - Math.floor(boxSize / 2)));
             
-            const centerRow = Math.floor(boxSize / 2);
-            const centerCol = Math.floor(boxSize / 2);
-            
             const channels = ['R', 'G', 'B'];
             
             for (let ch = 0; ch < 3; ch++) {
@@ -535,8 +546,18 @@
                         if (pixelX < width && pixelY < height) {
                             const index = (pixelY * width + pixelX) * 4 + ch;
                             const value = originalImageData.data[index];
-                            const isCenter = (y === centerRow && x === centerCol);
-                            htmlOriginal += `<td class="${isCenter ? 'center-cell' : ''}">${value}</td>`;
+                            
+                            // 원본 행렬: 대각선, 위쪽(빨강), 아래쪽(파랑)
+                            let cellClass = '';
+                            if (y === x) {
+                                cellClass = 'diagonal-cell';  // 대각선 (노란색)
+                            } else if (y < x) {
+                                cellClass = 'upper-triangle';  // 대각선 위쪽 (빨간색)
+                            } else {
+                                cellClass = 'lower-triangle';  // 대각선 아래쪽 (파란색)
+                            }
+                            
+                            htmlOriginal += `<td class="${cellClass}">${value}</td>`;
                         } else {
                             htmlOriginal += '<td>-</td>';
                         }
@@ -555,8 +576,18 @@
                         if (pixelX < width && pixelY < height) {
                             const index = (pixelY * width + pixelX) * 4 + ch;
                             const value = originalImageData.data[index];
-                            const isCenter = (y === centerRow && x === centerCol);
-                            htmlTranspose += `<td class="${isCenter ? 'center-cell' : ''}">${value}</td>`;
+                            
+                            // 전치 행렬: 대각선, 위쪽(파랑), 아래쪽(빨강) - 원본과 반대!
+                            let cellClass = '';
+                            if (y === x) {
+                                cellClass = 'diagonal-cell';  // 대각선 (노란색)
+                            } else if (y < x) {
+                                cellClass = 'lower-triangle';  // 대각선 위쪽 → 파란색 (원본의 아래쪽이었던 것)
+                            } else {
+                                cellClass = 'upper-triangle';  // 대각선 아래쪽 → 빨간색 (원본의 위쪽이었던 것)
+                            }
+                            
+                            htmlTranspose += `<td class="${cellClass}">${value}</td>`;
                         } else {
                             htmlTranspose += '<td>-</td>';
                         }
