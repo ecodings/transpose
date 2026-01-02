@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전치행렬로 이미지 변환하기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #a8dadc 0%, #81d4fa 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .button-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #81d4fa 0%, #4fc3f7 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 195, 247, 0.4);
+        }
+        
+        .btn-reset {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .btn-reset:hover {
+            background: linear-gradient(135deg, #d44332 0%, #a93226 100%);
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .images-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .image-box {
+            text-align: center;
+        }
+        
+        .image-box h3 {
+            margin-bottom: 15px;
+            color: #555;
+            font-size: 18px;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f5f5f5;
+            min-height: 400px;
+            width: 100%;
+            display: inline-block;
+        }
+        
+        .canvas-wrapper.empty {
+            background: repeating-linear-gradient(
+                45deg,
+                #f0f0f0,
+                #f0f0f0 10px,
+                #e0e0e0 10px,
+                #e0e0e0 20px
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .canvas-wrapper canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .placeholder {
+            color: #999;
+            font-size: 14px;
+            padding: 20px;
+        }
+        
+        canvas {
+            cursor: crosshair;
+        }
+        
+        .selection-box {
+            position: absolute;
+            border: 3px solid #4fc3f7;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(79, 195, 247, 0.6);
+            display: none;
+        }
+        
+        .matrix-section {
+            background: #e1f5fe;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #81d4fa;
+        }
+        
+        .matrix-section h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .matrix-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .matrix-column h4 {
+            text-align: center;
+            color: #555;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .matrix-label {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0277bd;
+        }
+        
+        .transpose-symbol {
+            font-size: 16px;
+            vertical-align: super;
+        }
+        
+        .matrix-box {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+        
+        .matrix-box.r-channel {
+            border-color: #ffcdd2;
+        }
+        
+        .matrix-box.g-channel {
+            border-color: #c8e6c9;
+        }
+        
+        .matrix-box.b-channel {
+            border-color: #bbdefb;
+        }
+        
+        .matrix-box h5 {
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .matrix-box.r-channel h5 {
+            color: #d32f2f;
+        }
+        
+        .matrix-box.g-channel h5 {
+            color: #388e3c;
+        }
+        
+        .matrix-box.b-channel h5 {
+            color: #1976d2;
+        }
+        
+        .matrix-table {
+            font-family: 'Courier New', monospace;
+            font-size: 17px;
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+        
+        .matrix-table td {
+            padding: 8px 6px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            background: #fafafa;
+            min-width: 45px;
+        }
+        
+        .matrix-table td.center-cell {
+            background: #fff9c4;
+            font-weight: bold;
+            border: 2px solid #fbc02d;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .info-box strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 전치행렬로 이미지 변환하기</h1>
+        
+        <div class="button-section">
+            <input type="file" id="imageInput" accept="image/*">
+            <button class="btn" onclick="document.getElementById('imageInput').click()">
+                📁 이미지 업로드
+            </button>
+            <button class="btn" onclick="loadSampleImage()">
+                🖼️ 샘플 이미지
+            </button>
+            <button class="btn btn-reset" onclick="resetAll()">
+                🔄 초기화
+            </button>
+        </div>
+        
+        <div class="images-container">
+            <div class="image-box">
+                <h3>원본 이미지</h3>
+                <div class="canvas-wrapper empty" id="wrapperOriginal">
+                    <canvas id="canvasOriginal" style="display: none;"></canvas>
+                    <div class="selection-box" id="selectionBoxOriginal"></div>
+                    <div class="placeholder" id="placeholderOriginal">이미지를 업로드하세요</div>
+                </div>
+            </div>
+            
+            <div class="image-box">
+                <h3>전치 이미지</h3>
+                <div class="canvas-wrapper empty" id="wrapperTranspose">
+                    <canvas id="canvasTranspose" style="display: none;"></canvas>
+                    <div class="selection-box" id="selectionBoxTranspose"></div>
+                    <div class="placeholder" id="placeholderTranspose">이미지를 업로드하세요</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="matrix-section">
+            <h3>📊 선택된 픽셀의 5×5 영역 행렬</h3>
+            <p style="color: #666; margin-bottom: 15px;">
+                💡 이미지를 클릭하면 해당 픽셀을 중심으로 5×5 영역의 RGB 채널 행렬을 확인할 수 있습니다.
+            </p>
+            
+            <div class="matrix-grid">
+                <div class="matrix-column">
+                    <h4><span class="matrix-label">A</span> (원본)</h4>
+                    <div class="matrix-box r-channel">
+                        <h5>R 채널</h5>
+                        <table class="matrix-table" id="matrixOriginalR"></table>
+                    </div>
+                    <div class="matrix-box g-channel">
+                        <h5>G 채널</h5>
+                        <table class="matrix-table" id="matrixOriginalG"></table>
+                    </div>
+                    <div class="matrix-box b-channel">
+                        <h5>B 채널</h5>
+                        <table class="matrix-table" id="matrixOriginalB"></table>
+                    </div>
+                </div>
+                
+                <div class="matrix-column">
+                    <h4><span class="matrix-label">A<span class="transpose-symbol">T</span></span> (전치)</h4>
+                    <div class="matrix-box r-channel">
+                        <h5>R 채널</h5>
+                        <table class="matrix-table" id="matrixTransposeR"></table>
+                    </div>
+                    <div class="matrix-box g-channel">
+                        <h5>G 채널</h5>
+                        <table class="matrix-table" id="matrixTransposeG"></table>
+                    </div>
+                    <div class="matrix-box b-channel">
+                        <h5>B 채널</h5>
+                        <table class="matrix-table" id="matrixTransposeB"></table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <strong>💡 전치행렬:</strong> 행렬 A의 행과 열을 바꾼 것이 A<sup>T</sup>입니다. 
+                즉, A[i][j] → A<sup>T</sup>[j][i]로 변환됩니다. 
+                이미지에서는 주 대각선을 기준으로 대칭된 형태로 나타납니다.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalImageData = null;
+        let transposeImageData = null;
+        let selectedX = null;
+        let selectedY = null;
+        const boxSize = 5;
+        
+        const canvasOriginal = document.getElementById('canvasOriginal');
+        const canvasTranspose = document.getElementById('canvasTranspose');
+        const ctxOriginal = canvasOriginal.getContext('2d');
+        const ctxTranspose = canvasTranspose.getContext('2d');
+        
+        // 초기화
+        function resetAll() {
+            originalImageData = null;
+            transposeImageData = null;
+            selectedX = null;
+            selectedY = null;
+            
+            ['canvasOriginal', 'canvasTranspose'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            
+            ['placeholderOriginal', 'placeholderTranspose'].forEach(id => {
+                document.getElementById(id).style.display = 'block';
+            });
+            
+            ['wrapperOriginal', 'wrapperTranspose'].forEach(id => {
+                document.getElementById(id).classList.add('empty');
+            });
+            
+            ['selectionBoxOriginal', 'selectionBoxTranspose'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            
+            ['OriginalR', 'OriginalG', 'OriginalB', 'TransposeR', 'TransposeG', 'TransposeB'].forEach(id => {
+                document.getElementById('matrix' + id).innerHTML = '';
+            });
+            
+            document.getElementById('imageInput').value = '';
+        }
+        
+        // 이미지 업로드
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        loadImage(img);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 샘플 이미지 로드
+        function loadSampleImage() {
+            const img = new Image();
+            img.onload = function() {
+                loadImage(img);
+            };
+            img.src = 'sample.jpg';
+        }
+        
+        function loadImage(img) {
+            const maxWidth = 500;
+            const maxHeight = 500;
+            
+            let width = img.width;
+            let height = img.height;
+            
+            // 크기 조정
+            if (width > maxWidth || height > maxHeight) {
+                const scale = Math.min(maxWidth / width, maxHeight / height);
+                width = Math.floor(width * scale);
+                height = Math.floor(height * scale);
+            }
+            
+            // 원본 이미지 그리기
+            canvasOriginal.width = width;
+            canvasOriginal.height = height;
+            ctxOriginal.drawImage(img, 0, 0, width, height);
+            originalImageData = ctxOriginal.getImageData(0, 0, width, height);
+            
+            // 전치 이미지 생성 (행과 열 바꾸기)
+            canvasTranspose.width = height;  // 가로와 세로 바뀜
+            canvasTranspose.height = width;
+            transposeImageData = ctxTranspose.createImageData(height, width);
+            
+            // 전치 연산: A[i][j] → A^T[j][i]
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const originalIndex = (y * width + x) * 4;
+                    const transposeIndex = (x * height + y) * 4;
+                    
+                    transposeImageData.data[transposeIndex] = originalImageData.data[originalIndex];         // R
+                    transposeImageData.data[transposeIndex + 1] = originalImageData.data[originalIndex + 1]; // G
+                    transposeImageData.data[transposeIndex + 2] = originalImageData.data[originalIndex + 2]; // B
+                    transposeImageData.data[transposeIndex + 3] = 255; // Alpha
+                }
+            }
+            
+            ctxTranspose.putImageData(transposeImageData, 0, 0);
+            
+            // UI 업데이트
+            document.getElementById('canvasOriginal').style.display = 'block';
+            document.getElementById('canvasTranspose').style.display = 'block';
+            document.getElementById('placeholderOriginal').style.display = 'none';
+            document.getElementById('placeholderTranspose').style.display = 'none';
+            document.getElementById('wrapperOriginal').classList.remove('empty');
+            document.getElementById('wrapperTranspose').classList.remove('empty');
+        }
+        
+        // 클릭 이벤트
+        function setupClickEvent(canvas, type) {
+            canvas.addEventListener('click', function(e) {
+                if (!originalImageData) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                selectedX = Math.floor((e.clientX - rect.left) * scaleX);
+                selectedY = Math.floor((e.clientY - rect.top) * scaleY);
+                
+                updateMatrix(type);
+                updateSelectionBoxes();
+            });
+        }
+        
+        setupClickEvent(canvasOriginal, 'original');
+        setupClickEvent(canvasTranspose, 'transpose');
+        
+        // 선택 박스 업데이트
+        function updateSelectionBoxes() {
+            if (!originalImageData || selectedX === null || selectedY === null) return;
+            
+            // 원본 이미지 선택 박스
+            const startXOriginal = Math.max(0, Math.min(canvasOriginal.width - boxSize, selectedX - Math.floor(boxSize / 2)));
+            const startYOriginal = Math.max(0, Math.min(canvasOriginal.height - boxSize, selectedY - Math.floor(boxSize / 2)));
+            
+            const rectOriginal = canvasOriginal.getBoundingClientRect();
+            const scaleXOriginal = rectOriginal.width / canvasOriginal.width;
+            const scaleYOriginal = rectOriginal.height / canvasOriginal.height;
+            
+            const boxOriginal = document.getElementById('selectionBoxOriginal');
+            boxOriginal.style.display = 'block';
+            boxOriginal.style.left = (startXOriginal * scaleXOriginal) + 'px';
+            boxOriginal.style.top = (startYOriginal * scaleYOriginal) + 'px';
+            boxOriginal.style.width = (boxSize * scaleXOriginal) + 'px';
+            boxOriginal.style.height = (boxSize * scaleYOriginal) + 'px';
+            
+            // 전치 이미지 선택 박스 (좌표가 바뀜)
+            const startXTranspose = Math.max(0, Math.min(canvasTranspose.width - boxSize, selectedY - Math.floor(boxSize / 2)));
+            const startYTranspose = Math.max(0, Math.min(canvasTranspose.height - boxSize, selectedX - Math.floor(boxSize / 2)));
+            
+            const rectTranspose = canvasTranspose.getBoundingClientRect();
+            const scaleXTranspose = rectTranspose.width / canvasTranspose.width;
+            const scaleYTranspose = rectTranspose.height / canvasTranspose.height;
+            
+            const boxTranspose = document.getElementById('selectionBoxTranspose');
+            boxTranspose.style.display = 'block';
+            boxTranspose.style.left = (startXTranspose * scaleXTranspose) + 'px';
+            boxTranspose.style.top = (startYTranspose * scaleYTranspose) + 'px';
+            boxTranspose.style.width = (boxSize * scaleXTranspose) + 'px';
+            boxTranspose.style.height = (boxSize * scaleYTranspose) + 'px';
+        }
+        
+        // 행렬 업데이트
+        function updateMatrix(clickedType) {
+            if (!originalImageData || selectedX === null || selectedY === null) return;
+            
+            const width = canvasOriginal.width;
+            const height = canvasOriginal.height;
+            
+            const startX = Math.max(0, Math.min(width - boxSize, selectedX - Math.floor(boxSize / 2)));
+            const startY = Math.max(0, Math.min(height - boxSize, selectedY - Math.floor(boxSize / 2)));
+            
+            const centerRow = Math.floor(boxSize / 2);
+            const centerCol = Math.floor(boxSize / 2);
+            
+            const channels = ['R', 'G', 'B'];
+            
+            for (let ch = 0; ch < 3; ch++) {
+                let htmlOriginal = '';
+                let htmlTranspose = '';
+                
+                // 원본 행렬 (5×5)
+                for (let y = 0; y < boxSize; y++) {
+                    htmlOriginal += '<tr>';
+                    for (let x = 0; x < boxSize; x++) {
+                        const pixelX = Math.floor(startX + x);
+                        const pixelY = Math.floor(startY + y);
+                        
+                        if (pixelX < width && pixelY < height) {
+                            const index = (pixelY * width + pixelX) * 4 + ch;
+                            const value = originalImageData.data[index];
+                            const isCenter = (y === centerRow && x === centerCol);
+                            htmlOriginal += `<td class="${isCenter ? 'center-cell' : ''}">${value}</td>`;
+                        } else {
+                            htmlOriginal += '<td>-</td>';
+                        }
+                    }
+                    htmlOriginal += '</tr>';
+                }
+                
+                // 전치 행렬 (행과 열이 바뀜)
+                for (let y = 0; y < boxSize; y++) {
+                    htmlTranspose += '<tr>';
+                    for (let x = 0; x < boxSize; x++) {
+                        // 전치: A[y][x] → A^T[x][y]
+                        const pixelX = Math.floor(startX + y); // x와 y 바뀜
+                        const pixelY = Math.floor(startY + x);
+                        
+                        if (pixelX < width && pixelY < height) {
+                            const index = (pixelY * width + pixelX) * 4 + ch;
+                            const value = originalImageData.data[index];
+                            const isCenter = (y === centerRow && x === centerCol);
+                            htmlTranspose += `<td class="${isCenter ? 'center-cell' : ''}">${value}</td>`;
+                        } else {
+                            htmlTranspose += '<td>-</td>';
+                        }
+                    }
+                    htmlTranspose += '</tr>';
+                }
+                
+                document.getElementById('matrixOriginal' + channels[ch]).innerHTML = htmlOriginal;
+                document.getElementById('matrixTranspose' + channels[ch]).innerHTML = htmlTranspose;
+            }
+        }
+    </script>
+</body>
+</html>
